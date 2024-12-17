@@ -92,7 +92,7 @@ def _find_ijkr(stars_a, stars_b, angles, observed_angles):
 
 
 def star_identifier(database, star_centers):
-    stars_a, stars_b, angles = database
+    stars_a, stars_b, angles, catalog = database
     
     for start in range(len(star_centers) - 4):
         
@@ -115,7 +115,7 @@ def star_identifier(database, star_centers):
                     extra_count += 1
                     print(e, extra_count)
             
-            return ijkr
+            return ijkr, star_centers[start : start + 4]
     
 
 def _identify_extra_stars(stars_a, stars_b, angles, ijkr, star_centers_ijkr, extra_star):

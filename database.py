@@ -79,7 +79,7 @@ def _generate_map(catalog, threshold_degrees=15):
                 stars_b.append(star2[3])  
                 cossphere_angle_list.append(cos_distance)
 
-    # Sort the lists based on the cosine of the angle in decreasing order
+    # Sort the lists based on the cosine of the angle in increasing order
     sorted_indexes = sorted(range(len(cossphere_angle_list)), key=lambda i: cossphere_angle_list[i])
 
     # Apply sorting to all three lists
@@ -95,7 +95,9 @@ def run_database(file_path):
     catalog = _remove_close_stars(catalog, 0.2, 2000)
     stars_a, stars_b, angles = _generate_map(catalog, 15)  
     
-    return stars_a, stars_b, angles
+    print(len(angles))
+    
+    return stars_a, stars_b, angles, catalog
 
 
 if __name__ == "__main__":
