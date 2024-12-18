@@ -1,0 +1,9 @@
+#define FOCAL_LENGTH_MM 49.f
+#define PIXEL_SIZE_UM 22.f
+#define FOCAL_LENGTH_PIXELS ((FOCAL_LENGTH_MM * 1000)/ PIXEL_SIZE_UM)
+
+#define IMAGE_X 1000
+#define IMAGE_HALF_X (IMAGE_X / 2)
+
+#define IMAGE_Y 667
+#define IMAGE_HALF_Y (IMAGE_Y / 2)
