@@ -14,6 +14,12 @@ void add(const float list1[], const float list2[], float result[], int n) {
     }
 }
 
+void add_three(const float list1[], const float list2[], const float list3[],float result[], int n) {
+    for (int i = 0; i < n; ++i) {
+        result[i] = list1[i] + list2[i] + list3[i];
+    }
+}
+
 void transpose(const float list[], float result[], int n) {
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
@@ -94,3 +100,12 @@ void matrix_multiply(const float list1[], const float list2[], float result[], i
         }
     }
 }
+
+void matrix_vector_multiply(const float list1[], const float list2[], float result[], int n) {
+    for (int i = 0; i < n; ++i) {
+        for (int j = 0; j < n; ++j) {
+            result[i] += list1[i * n + j] * list2[j];
+        }
+    }
+}
+

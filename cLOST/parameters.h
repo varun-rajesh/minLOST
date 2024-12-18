@@ -7,3 +7,5 @@
 
 #define IMAGE_Y 667
 #define IMAGE_HALF_Y (IMAGE_Y / 2)
+
+#define EIGENVALUE_THRESHOLD 0.0001

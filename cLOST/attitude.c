@@ -1,6 +1,23 @@
 #include "attitude.h"
 
-void quest(catalog_entry_t star_catalog[], uint16_t star_ids[], float star_coords[][2], uint8_t n) {
+float quest_char_poly(float x, float a, float b, float c, float d, float s) {
+    return (pow(x, 2) - a) * (pow(x, 2) - b) - (c * x) + (c * s) - d;
+}
+
+float quest_char_poly_prime(float x, float a, float b, float c) {
+    return 4 * pow(x, 3) - 2 * (a + b) * x - c;
+}
+
+float quest_eigenvalue_estimator(float guess, float a, float b, float c, float d, float s, float epsilon) {
+    float height;
+    do {
+        height = quest_char_poly(guess, a, b, c, d, s) / quest_char_poly_prime(guess, a, b, c);
+        guess -= height;
+    } while (fabs(height) >= epsilon);
+    return guess;
+}
+
+void quest(catalog_entry_t star_catalog[], uint16_t star_ids[], float star_coords[][2], float quaternion[], uint8_t n) {
     
     float B[9] = {0.f};
 
@@ -39,11 +56,33 @@ void quest(catalog_entry_t star_catalog[], uint16_t star_ids[], float star_coord
     matrix_multiply(S, S, S_2, 3);
     float d = change_of_base(Z, S_2, 3);
 
-    printf("a: %f, b: %f, c: %f, d: %f \n", a, b, c, d);
+    float eig = quest_eigenvalue_estimator(n, a, b, c, d, sigma, EIGENVALUE_THRESHOLD);
+
+    float alpha = eig * eig - sigma * sigma + kappa;
+    float beta = eig - sigma;
+    float gamma = (eig + sigma) * alpha - delta;
+
+    float alpha_eye[9] = {alpha, 0.f, 0.f, 0.f, alpha, 0.f, 0.f, 0.f, alpha};
+    
+    float S_BETA[9] = {0.f};
+    scalar_multiply(S, beta, S_BETA, 9);
+    
+    float X_temp[9] = {0.0f};
+    add_three(alpha_eye, S_BETA, S_2, X_temp, 9);
+    float X[9] = {0.0f};
+    matrix_vector_multiply(X_temp, Z, X, 3);
+
+    float scalar = 1 / (sqrt(gamma * gamma + dot(X, X, 3)));
+    scalar_multiply(X, scalar, X, 3);
+    gamma = gamma * scalar;
+
+    quaternion[0] = gamma;
+    quaternion[1] = X[0];
+    quaternion[2] = X[1];
+    quaternion[3] = X[2];
 }
 
 int main() {
-    // Create an array to store 4 catalog entries
     catalog_entry_t catalog[4] = {
         {0.24743677667851524, 1.059705749986988, 2.47, 0.0f, 0.0f, 0.0f},
         {0.37444585242271433, 1.051303926954105, 2.68, 0.0f, 0.0f, 0.0f},
@@ -51,7 +90,6 @@ int main() {
         {0.4991423494547283, 1.1112511347447898, 3.38, 0.0f, 0.0f, 0.0f}
     };
 
-    // Calculate the x, y, z coordinates for each entry
     for (int i = 0; i < 4; ++i) {
         catalog[i].x = cos(catalog[i].de) * cos(catalog[i].ra);
         catalog[i].y = cos(catalog[i].de) * sin(catalog[i].ra);
@@ -61,7 +99,10 @@ int main() {
     uint16_t star_ids[] = {0, 1, 2, 3};
     float star_coords[][2] = {{547, 448}, {409, 437}, {609, 619}, {328, 271}};
 
-    quest(catalog, star_ids, star_coords, 4);
+    float quaternion[4];
+    quest(catalog, star_ids, star_coords, quaternion, 4);
+
+    printf("Attitude: [%f + %fi + %fj + %fk]\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 
     return 0;
 }
