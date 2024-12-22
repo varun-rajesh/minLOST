@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "linalg.h"
 
 void outer_product(const float list1[], const float list2[], float result[], int n) {
     for (int i = 0; i < n; ++i) {
@@ -107,5 +107,20 @@ void matrix_vector_multiply(const float list1[], const float list2[], float resu
             result[i] += list1[i * n + j] * list2[j];
         }
     }
+}
+
+coords_3d_t cross_product(coords_3d_t v1, coords_3d_t v2) {
+    coords_3d_t cross;
+    cross.x = v1.y * v2.z - v1.z * v2.y;
+    cross.y = v1.z * v2.x - v1.x * v2.z;
+    cross.z = v1.x * v2.y - v1.y * v2.x;
+    return cross;
+}
+
+float dot_coords(coords_3d_t list1, coords_3d_t list2) {
+    float list1_arr[3] = {list1.x, list1.y, list1.z};
+    float list2_arr[3] = {list2.x, list2.y, list2.z};
+
+    return dot(list1_arr, list2_arr, 3);
 }
 

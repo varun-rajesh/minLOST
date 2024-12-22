@@ -17,16 +17,17 @@ float quest_eigenvalue_estimator(float guess, float a, float b, float c, float d
     return guess;
 }
 
-void quest(catalog_entry_t star_catalog[], uint16_t star_ids[], float star_coords[][2], float quaternion[], uint8_t n) {
+void quest(catalog_entry_t star_catalog[], uint32_t star_ids[], coords_2d_t star_coords[], float quaternion[], uint8_t n) {
     
     float B[9] = {0.f};
 
     for (uint8_t i = 0; i < n; ++i) {
-        float cam_spatial[3] = {0.f};
-        camera_to_spatial(star_coords[i], cam_spatial);
+        coords_3d_t cam_spatial_coords = {0.f};
+        camera_to_spatial(star_coords[i], &cam_spatial_coords);
+        float cam_spatial[3] = {cam_spatial_coords.x, cam_spatial_coords.y, cam_spatial_coords.z};
 
         catalog_entry_t star = star_catalog[star_ids[i]];
-        float cat_spatial[3] = {star.x, star.y, star.z};
+        float cat_spatial[3] = {star.spatial.x, star.spatial.y, star.spatial.z};
 
         float outer[9] = {0.f};
         outer_product(cat_spatial, cam_spatial, outer, 3);
@@ -82,27 +83,27 @@ void quest(catalog_entry_t star_catalog[], uint16_t star_ids[], float star_coord
     quaternion[3] = X[2];
 }
 
-int main() {
-    catalog_entry_t catalog[4] = {
-        {0.24743677667851524, 1.059705749986988, 2.47, 0.0f, 0.0f, 0.0f},
-        {0.37444585242271433, 1.051303926954105, 2.68, 0.0f, 0.0f, 0.0f},
-        {0.17675094197274493, 0.9867606738309735, 2.23, 0.0f, 0.0f, 0.0f},
-        {0.4991423494547283, 1.1112511347447898, 3.38, 0.0f, 0.0f, 0.0f}
-    };
+// int main() {
+//     catalog_entry_t catalog[4] = {
+//         {0.24743677667851524, 1.059705749986988, 2.47, {0.0f, 0.0f, 0.0f}},
+//         {0.37444585242271433, 1.051303926954105, 2.68, {0.0f, 0.0f, 0.0f}},
+//         {0.17675094197274493, 0.9867606738309735, 2.23,{0.0f, 0.0f, 0.0f}},
+//         {0.4991423494547283, 1.1112511347447898, 3.38,{0.0f, 0.0f, 0.0f}}
+//     };
 
-    for (int i = 0; i < 4; ++i) {
-        catalog[i].x = cos(catalog[i].de) * cos(catalog[i].ra);
-        catalog[i].y = cos(catalog[i].de) * sin(catalog[i].ra);
-        catalog[i].z = sin(catalog[i].de);
-    }
+//     for (int i = 0; i < 4; ++i) {
+//         catalog[i].spatial.x = cos(catalog[i].de) * cos(catalog[i].ra);
+//         catalog[i].spatial.y = cos(catalog[i].de) * sin(catalog[i].ra);
+//         catalog[i].spatial.z = sin(catalog[i].de);
+//     }
 
-    uint16_t star_ids[] = {0, 1, 2, 3};
-    float star_coords[][2] = {{547, 448}, {409, 437}, {609, 619}, {328, 271}};
+//     uint32_t star_ids[] = {0, 1, 2, 3};
+//     coords_2d_t star_coords[] = {{547, 448}, {409, 437}, {609, 619}, {328, 271}};
 
-    float quaternion[4];
-    quest(catalog, star_ids, star_coords, quaternion, 4);
+//     float quaternion[4];
+//     quest(catalog, star_ids, star_coords, quaternion, 4);
 
-    printf("Attitude: [%f + %fi + %fj + %fk]\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
+//     printf("Attitude: [%f + %fi + %fj + %fk]\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
 
-    return 0;
-}
+//     return 0;
+// }
