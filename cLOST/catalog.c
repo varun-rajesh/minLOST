@@ -14,10 +14,8 @@ void populate_angle_list(const char *filename) {
     size_t index = 0;
 
     while (fgets(line, sizeof(line), file) && index < ANGLE_CATALOG_LENGTH) {
-        // Trim trailing newline if present
         line[strcspn(line, "\n")] = '\0';
 
-        // Parse the line: format "star0,star1,angle"
         uint32_t star0, star1;
         float angle;
 
@@ -49,10 +47,7 @@ void populate_star_list(const char *filename) {
     size_t index = 0;
 
     while (fgets(line, sizeof(line), file) && index < STAR_CATALOG_LENGTH) {
-        // Trim trailing newline if present
         line[strcspn(line, "\n")] = '\0';
-
-        // Parse the line: format "ra,de,magnitude,id,x,y,z"
         float ra, de, magnitude, x, y, z;
         int32_t id;
 

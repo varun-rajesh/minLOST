@@ -11,7 +11,7 @@
 #include "parameters.h"
 #include "catalog.h"
 
-#define ELEMENT_COUNT 11
+#define ELEMENT_COUNT 16
 
 #define DEBUG 1
 
@@ -23,12 +23,13 @@
 
 star_id_parameters_t ijkr_params;
 identified_star_t identified_ijkr[4];
+identified_star_t all_stars[ELEMENT_COUNT];
 
 uint32_t bounded_binary_angle_search(float target_angle) {
     uint32_t left = (uint32_t) floor(LEFT_M * target_angle + LEFT_B);
     uint32_t right = (uint32_t) floor(RIGHT_M * target_angle + RIGHT_B);
 
-    uint32_t closest_index = 0; // Default to 0 if no valid index is found
+    uint32_t closest_index = 0;
     uint32_t best_less_than_target = 0;
 
     while (left <= right) {
@@ -36,9 +37,9 @@ uint32_t bounded_binary_angle_search(float target_angle) {
 
         if (fabs(angle_list[mid].angle - target_angle) <= BIN_SEARCH_EPSILON) {
             closest_index = mid;
-            return closest_index; // Found a valid candidate
+            return closest_index;
         } else if (angle_list[mid].angle < target_angle) {
-            best_less_than_target = mid; // Track the largest index less than target
+            best_less_than_target = mid;
             left = mid + 1;
         } else {
             right = mid - 1;
@@ -96,6 +97,8 @@ bool check_generic(uint32_t candidate1, uint32_t candidate2, int32_t base_index,
         return false;
     }
     
+
+
     int32_t offset = 0;
 
     while (1) {
@@ -146,7 +149,6 @@ ijkr_t find_r_from_ijk(uint32_t i_candidate, uint32_t j_candidate, uint32_t k_ca
 
         if (bound_check(ir_index, ir_angle)) {
             uint32_t r_candidate = NO_CANDIDATE_FOUND;
-
             if (angle_list[ir_index].star[0] == i_candidate) {
                 r_candidate = angle_list[ir_index].star[1];
             } else if (angle_list[ir_index].star[1] == i_candidate) {
@@ -157,6 +159,7 @@ ijkr_t find_r_from_ijk(uint32_t i_candidate, uint32_t j_candidate, uint32_t k_ca
                 bool jkr_direction = spherical_signed_area(j_candidate, k_candidate, r_candidate);
                 if (jkr_direction == ijkr_params.jkr_direction) {
                     if (candidate_found != NO_CANDIDATE_FOUND) {
+                        printf("Multiple candidate found\n");
                         return (ijkr_t) {MULTI_CANDIDATE_ERROR};
                     } else {
                         r = r_candidate;
@@ -203,8 +206,8 @@ ijkr_t find_kr_from_ij(uint32_t i_candidate, uint32_t j_candidate) {
                     if (ijkr.r == MULTI_CANDIDATE_ERROR) {
                         return (ijkr_t) {MULTI_CANDIDATE_ERROR};
                     } else if (ijkr.valid == CANDIDATE_FOUND) {
-                        // Already set r and k
                         if (candidate_found == CANDIDATE_FOUND) {
+                            printf("Multiple candidate found\n");
                             return (ijkr_t) {MULTI_CANDIDATE_ERROR};
                         } else {
                             r = ijkr.r;
@@ -284,14 +287,15 @@ bool cmp_image_stars(image_star_t a, image_star_t b) {
 }
 
 
-void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_length, uint32_t identified_stars[]) {
+void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_length) {
     for (int i = 0; i < image_stars_length; i++) {
         image_star_t image_star = image_stars[i];
         
         bool skip = false;
         for (int j = 0; j < 4; j++) {
             if (cmp_image_stars(image_star, identified_ijkr[j].image_star)) {
-                identified_stars[i] = identified_ijkr[j].catalog_star;
+                all_stars[i].catalog_star = identified_ijkr[j].catalog_star;
+                all_stars[i].image_star = image_star;
                 skip = true;
                 break;
             }
@@ -334,7 +338,8 @@ void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_le
                 if (kx_valid) {
                     bool rx_valid = check_generic(identified_ijkr[3].catalog_star, x_candidate, start_index[3], angles[3]);
                     if (rx_valid) {
-                        identified_stars[i] = x_candidate;
+                        all_stars[i].catalog_star = x_candidate;
+                        all_stars[i].image_star = image_star;
                     }
                 }
             }
@@ -386,8 +391,6 @@ void run_star_identifier(image_star_t image_stars[], uint32_t image_stars_length
                         image_stars[r - 1]
                     };
 
-                    printf("%d, %d, %d, %d\n", i - 1, j - 1, k - 1, r - 1);
-
                     bool valid_setup = setup_star_params(candidates);
                     if (valid_setup) {
                         ijkr_t ijkr = find_ijkr();
@@ -416,34 +419,33 @@ int main() {
     initialize_catalog("angle_catalog.csv", "star_catalog.csv");
 
     image_star_t image_stars[ELEMENT_COUNT] = {
-        {{547.9, 448.1}, 0.f},
-        {{409.1, 437.2}, 0.f},
-        {{609.0, 619.0}, 0.f},
-        {{775.4, 524.3}, 0.f},
-        {{328.4, 271.2}, 0.f},
-        {{664.3, 375.2}, 0.f},
-        {{489.4, 2.3}, 0.f},
-        {{360.6, 463.5}, 0.f},
-        {{436.4, 647.5}, 0.f},
-        {{567.2, 434.9}, 0.f},
-        {{263.8, 783.0}, 0.f},
+        {{548.4026719273497,448.59646049932917}, 0.f},
+        {{409.6136479530881,437.706805266652}, 0.f},
+        {{609.8642885582511,619.9636109596883}, 0.f},
+        {{775.9032816948344,524.785460117536}, 0.f},
+        {{328.8673568635003,271.711187260408}, 0.f},
+        {{569.858614128298,564.9542537995878}, 0.f},
+        {{664.8416744362834,375.6708372181417}, 0.f},
+        {{489.922688626524,144.92041476259823}, 0.f},
+        {{361.09202887119,463.9575251363737}, 0.f},
+        {{436.8549954271022,647.954081885249}, 0.f},
+        {{539.8439744623835,506.9504680832963}, 0.f},
+        {{567.67559906618,435.4025091212013}, 0.f},
+        {{264.2939723382642,79.17773672506645}, 0.f},
+        {{463.23253452614176,33.738723135178105}, 0.f},
+        {{417.49999999999994,519.5219510824131}, 0.f},
+        {{844.8480752553237,181.09664253721255}, 0.f}
     };
 
     run_star_identifier(image_stars, ELEMENT_COUNT);
-
-    for (int i = 0; i < 4; i++) {
-        double x = identified_ijkr[i].image_star.camera.x;
-        double y = identified_ijkr[i].image_star.camera.y;
-        uint32_t id = identified_ijkr[i].catalog_star;
-
-        printf("Coords: (%f, %f); ID: %d\n", x, y, id);
-    }
-
-    uint32_t identified_stars[ELEMENT_COUNT] = {0};
-    find_additional_matches(image_stars, ELEMENT_COUNT, identified_stars);
+    find_additional_matches(image_stars, ELEMENT_COUNT);
 
     for (int i = 0; i < ELEMENT_COUNT; i++) {
-        printf("Identified: %d\n", identified_stars[i]);
+        float x = all_stars[i].image_star.camera.x;
+        float y = all_stars[i].image_star.camera.y;
+        uint32_t id = all_stars[i].catalog_star;
+
+        printf("\t\t\t\t{ { { %f, %f }, 0.0 }, %d },\n", x, y, id);
     }
 }
 

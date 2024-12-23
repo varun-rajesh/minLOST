@@ -78,4 +78,4 @@ typedef struct {
 } identified_star_t;
 
 
-#endif // types_h
+#endif

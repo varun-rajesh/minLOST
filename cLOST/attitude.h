@@ -10,6 +10,6 @@
 #include "linalg.h"
 #include "catalog.h"
 
-void quest(catalog_entry_t star_catalog[], uint32_t star_ids[], coords_2d_t star_coords[], float quaternion[], uint8_t n);
+void quest(identified_star_t identifed_stars[], float quaternion[], uint8_t n);
 
 #endif
