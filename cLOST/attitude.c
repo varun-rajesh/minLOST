@@ -1,12 +1,15 @@
 #include "attitude.h"
 #define M_PI 3.14159265358979323846
 
+int max_star_id = 0;
+float ra, de, roll;
+
 float quest_char_poly(float x, float a, float b, float c, float d, float s) {
-    return (pow(x, 2) - a) * (pow(x, 2) - b) - (c * x) + (c * s) - d;
+    return (POW2(x) - a) * (POW2(x) - b) - (c * x) + (c * s) - d;
 }
 
 float quest_char_poly_prime(float x, float a, float b, float c) {
-    return 4 * pow(x, 3) - 2 * (a + b) * x - c;
+    return 4 * POW3(x) - 2 * (a + b) * x - c;
 }
 
 float quest_eigenvalue_estimator(float guess, float a, float b, float c, float d, float s, float epsilon) {
@@ -51,6 +54,7 @@ void quest(identified_star_t identifed_stars[], float quaternion[], uint8_t n) {
         float weight = identifed_stars[i].image_star.magnitude;
 
         if (star_id == 0) {
+            //printf("Star: (%f, %f) is %d\n", star_coords.x, star_coords.y, star_id);
             continue;
         }
 
@@ -66,6 +70,8 @@ void quest(identified_star_t identifed_stars[], float quaternion[], uint8_t n) {
         scalar_multiply(outer, weight, outer, 9); 
         add(B, outer, B, 9);
         guess += weight;
+
+        max_star_id = MAX(star_id, max_star_id);
     }
 
     float sigma = trace(B, 3);
@@ -117,18 +123,13 @@ void quest(identified_star_t identifed_stars[], float quaternion[], uint8_t n) {
     quaternion[2] = X[1];
     quaternion[3] = X[2];
 
-    float ra, de, roll;
     quaternion_to_euler(quaternion, &ra, &de, &roll);
-
-    printf("Ra: %f, De: %f, Roll: %f\n", ra, de, roll);
 }
 
-#define ELEMENT_COUNT 16
-
-void assign_weights(identified_star_t identified_stars[]) {
+int assign_weights(identified_star_t identified_stars[]) {
     uint32_t count = 0;
 
-    for (int i = 0; i < ELEMENT_COUNT; i++) {
+    for (int i = 0; i < MAX_ID_STARS; i++) {
         identified_star_t star = identified_stars[i];
         uint32_t id = star.catalog_star;
 
@@ -138,38 +139,52 @@ void assign_weights(identified_star_t identified_stars[]) {
     }
 
     float weight = 1.f / count;
-    for (int i = 0; i < ELEMENT_COUNT; i++) {
+    for (int i = 0; i < MAX_ID_STARS; i++) {
         identified_stars[i].image_star.magnitude = weight;
+    }
+
+    return count;
+}
+
+void run_attitude(identified_star_t identified_stars[], float attitude[]) {
+    int count = assign_weights(identified_stars);
+    if (count >= 4) {
+        quest(identified_stars, attitude, MAX_ID_STARS);
+        timer_stop_id();
+        printf("RA=%f, Dec=%f, Roll=%f\n", ra, de, roll); 
+        printf("Max Star ID: %d\n", max_star_id);
+    } else {
+        timer_stop_unid();
     }
 }
 
-int main() {
-    initialize_catalog("angle_catalog.csv", "star_catalog.csv");
+// int main() {
+//     initialize_catalog("angle_catalog.csv", "star_catalog.csv");
 
-    identified_star_t identified_stars[ELEMENT_COUNT] = {
-                                { { { 548.402649, 448.596466 }, 0.0 }, 82 },
-                                { { { 409.613647, 437.706818 }, 0.0 }, 98 },
-                                { { { 609.864319, 619.963623 }, 0.0 }, 60 },
-                                { { { 775.903259, 524.785461 }, 0.0 }, 66 },
-                                { { { 328.867371, 271.711182 }, 0.0 }, 234 },
-                                { { { 569.858643, 564.954224 }, 0.0 }, 248 },
-                                { { { 664.841675, 375.670837 }, 0.0 }, 576 },
-                                { { { 489.922699, 144.920410 }, 0.0 }, 1109 },
-                                { { { 361.092041, 463.957520 }, 0.0 }, 1072 },
-                                { { { 436.854980, 647.954102 }, 0.0 }, 691 },
-                                { { { 539.843994, 506.950470 }, 0.0 }, 976 },
-                                { { { 567.675598, 435.402496 }, 0.0 }, 1222 },
-                                { { { 0.000000, 0.000000 }, 0.0 }, 0 },
-                                { { { 0.000000, 0.000000 }, 0.0 }, 0 },
-                                { { { 417.500000, 519.521973 }, 0.0 }, 1488 },
-                                { { { 844.848083, 181.096649 }, 0.0 }, 1630 },
-    };
+//     identified_star_t identified_stars[MAX_ID_STARS] = {
+//                                 { { { 548.402649, 448.596466 }, 0.0 }, 82 },
+//                                 { { { 409.613647, 437.706818 }, 0.0 }, 98 },
+//                                 { { { 609.864319, 619.963623 }, 0.0 }, 60 },
+//                                 { { { 775.903259, 524.785461 }, 0.0 }, 66 },
+//                                 { { { 328.867371, 271.711182 }, 0.0 }, 234 },
+//                                 { { { 569.858643, 564.954224 }, 0.0 }, 248 },
+//                                 { { { 664.841675, 375.670837 }, 0.0 }, 576 },
+//                                 { { { 489.922699, 144.920410 }, 0.0 }, 1109 },
+//                                 { { { 361.092041, 463.957520 }, 0.0 }, 1072 },
+//                                 { { { 436.854980, 647.954102 }, 0.0 }, 691 },
+//                                 { { { 539.843994, 506.950470 }, 0.0 }, 976 },
+//                                 { { { 567.675598, 435.402496 }, 0.0 }, 1222 },
+//                                 { { { 0.000000, 0.000000 }, 0.0 }, 0 },
+//                                 { { { 0.000000, 0.000000 }, 0.0 }, 0 },
+//                                 { { { 417.500000, 519.521973 }, 0.0 }, 1488 },
+//                                 { { { 844.848083, 181.096649 }, 0.0 }, 1630 },
+//     };
 
-    assign_weights(identified_stars);
+//     assign_weights(identified_stars);
 
-    float quaternion[4] = {0.0};
+//     float quaternion[4] = {0.0};
 
-    quest(identified_stars, quaternion, ELEMENT_COUNT);
+//     quest(identified_stars, quaternion, MAX_ID_STARS);
 
-    printf("Quaternion: [%f, %f, %f, %f]\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
-}
+//     printf("Quaternion: [%f, %f, %f, %f]\n", quaternion[0], quaternion[1], quaternion[2], quaternion[3]);
+// }

@@ -1,33 +1,14 @@
-#include <math.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
-#include "types.h"
-#include "utils.h"
-#include "catalog.h"
-#include "parameters.h"
-#include "catalog.h"
-
-#define ELEMENT_COUNT 16
-
-#define DEBUG 1
-
-#if DEBUG
-    #define DEBUG_PRINT(...) printf(__VA_ARGS__)
-#else
-    #define DEBUG_PRINT(...) ((void)0)
-#endif
+#include "star_identifier.h"
 
 star_id_parameters_t ijkr_params;
 identified_star_t identified_ijkr[4];
-identified_star_t all_stars[ELEMENT_COUNT];
+identified_star_t all_stars[MAX_ID_STARS];
 
 uint32_t bounded_binary_angle_search(float target_angle) {
     uint32_t left = (uint32_t) floor(LEFT_M * target_angle + LEFT_B);
     uint32_t right = (uint32_t) floor(RIGHT_M * target_angle + RIGHT_B);
+
+    // printf("Angle: %f, left: %d, right: %d\n", target_angle, left, right);
 
     uint32_t closest_index = 0;
     uint32_t best_less_than_target = 0;
@@ -162,6 +143,7 @@ ijkr_t find_r_from_ijk(uint32_t i_candidate, uint32_t j_candidate, uint32_t k_ca
                         printf("Multiple candidate found\n");
                         return (ijkr_t) {MULTI_CANDIDATE_ERROR};
                     } else {
+                        // printf("ijkr: %d, %d, %d, %d\n", i_candidate, j_candidate, k_candidate, r_candidate);
                         r = r_candidate;
                         candidate_found = CANDIDATE_FOUND;
                     }
@@ -287,13 +269,20 @@ bool cmp_image_stars(image_star_t a, image_star_t b) {
 }
 
 
-void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_length) {
-    for (int i = 0; i < image_stars_length; i++) {
+void find_additional_matches(image_star_t image_stars[]) {
+    for (int i = 0; i < MAX_ID_STARS; i++) {
         image_star_t image_star = image_stars[i];
+        // printf("Image star[%d]: (%f, %f)\n", i, image_star.camera.x, image_star.camera.y);
+        // printf("Prev catalog star: %d\n", all_stars[i].catalog_star);
+
+        if (image_star.magnitude == 0.f) {
+            continue;
+        }
         
         bool skip = false;
         for (int j = 0; j < 4; j++) {
             if (cmp_image_stars(image_star, identified_ijkr[j].image_star)) {
+                // printf("Skipping %d for ijkr\n", i);
                 all_stars[i].catalog_star = identified_ijkr[j].catalog_star;
                 all_stars[i].image_star = image_star;
                 skip = true;
@@ -310,10 +299,12 @@ void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_le
         uint32_t start_index[4];
         for (int j = 0; j < 4; j++) {
             angles[j] = camera_angle(image_star.camera, identified_ijkr[j].image_star.camera);
+            // printf("Angle[%d][%d] = %f\n", i, j, angles[j]);
             if ((angles[j] < cos(CATALOG_MAX_ANGLE)) || (angles[j] > cos(CATALOG_MIN_ANGLE))) {
                 abort = true;
                 break;
             }
+            // printf("Angle[%d][%d] = %f\n", i, j, angles[j]);
             start_index[j] = bounded_binary_angle_search(angles[j]);
         }
 
@@ -328,8 +319,10 @@ void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_le
             uint32_t x_candidate = NO_CANDIDATE_FOUND;
             if (angle_list[ix_index].star[0] == identified_ijkr[0].catalog_star) {
                 x_candidate = angle_list[ix_index].star[1];
+                // printf("ix_index: %d, i_candidate: %d, x_candidate: %d\n", ix_index, angle_list[ix_index].star[0], x_candidate);
             } else if (angle_list[ix_index].star[1] == identified_ijkr[0].catalog_star) {
                 x_candidate = angle_list[ix_index].star[0];
+                // printf("ix_index: %d, i_candidate: %d, x_candidate: %d\n", ix_index, angle_list[ix_index].star[1], x_candidate);
             }
 
             bool jx_valid = check_generic(identified_ijkr[1].catalog_star, x_candidate, start_index[1], angles[1]);
@@ -338,6 +331,7 @@ void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_le
                 if (kx_valid) {
                     bool rx_valid = check_generic(identified_ijkr[3].catalog_star, x_candidate, start_index[3], angles[3]);
                     if (rx_valid) {
+                        // printf("Identified for: %d\n", i);
                         all_stars[i].catalog_star = x_candidate;
                         all_stars[i].image_star = image_star;
                     }
@@ -352,6 +346,47 @@ void find_additional_matches(image_star_t image_stars[], uint32_t image_stars_le
     }
 }
 
+bool check_mismatch(coords_2d_t a_cam, coords_2d_t b_cam, coords_2d_t c_cam) {
+    coords_3d_t a_spatial, b_spatial, c_spatial;
+    camera_to_spatial(a_cam, &a_spatial);
+    camera_to_spatial(b_cam, &b_spatial);
+    camera_to_spatial(c_cam, &c_spatial);
+
+    float ab_angle = spatial_angle(a_spatial, b_spatial);
+
+    coords_3d_t pair_1;
+    coords_3d_t pair_2;
+
+    // a sin inner
+    pair_1 = (coords_3d_t){b_spatial.x - a_spatial.x, b_spatial.y - a_spatial.y, b_spatial.z - a_spatial.z};
+    pair_2 = (coords_3d_t){c_spatial.x - a_spatial.x, c_spatial.y - a_spatial.y, c_spatial.z - a_spatial.z};
+    float a_cos_inner = spatial_angle(pair_1, pair_2);
+    float a_sin_inner = sqrt(1 - a_cos_inner * a_cos_inner);
+
+    // b sin inner
+    pair_1 = (coords_3d_t){a_spatial.x - b_spatial.x, a_spatial.y - b_spatial.y, a_spatial.z - b_spatial.z};
+    pair_2 = (coords_3d_t){c_spatial.x - b_spatial.x, c_spatial.y - b_spatial.y, c_spatial.z - b_spatial.z};
+    float b_cos_inner = spatial_angle(pair_1, pair_2);
+    float b_sin_inner = sqrt(1 - b_cos_inner * b_cos_inner);
+
+    // c sin inner
+    pair_1 = (coords_3d_t){a_spatial.x - c_spatial.x, a_spatial.y - c_spatial.y, a_spatial.z - c_spatial.z};
+    pair_2 = (coords_3d_t){b_spatial.x - c_spatial.x, b_spatial.y - c_spatial.y, b_spatial.z - c_spatial.z};
+    float c_cos_inner = spatial_angle(pair_1, pair_2);
+    float c_sin_inner = sqrt(1 - c_cos_inner * c_cos_inner);
+
+    float max_sin = MAX(MAX(a_sin_inner, b_sin_inner), c_sin_inner);
+
+    float expected_mismatch = (((2.56349e-05 * ab_angle) / c_sin_inner) / max_sin);
+
+    if (expected_mismatch > 0.0001) {
+        // printf("Skip mismatch\n");
+        return true;
+    }
+
+    return false;
+}
+
 
 bool setup_star_params(image_star_t image_stars[4]) {
     uint8_t index = 0;
@@ -359,14 +394,25 @@ bool setup_star_params(image_star_t image_stars[4]) {
         for (uint8_t j = i + 1; j < 4; j++) {
             float angle = camera_angle(image_stars[i].camera, image_stars[j].camera);
             if ((angle < cos(CATALOG_MAX_ANGLE)) || (angle > cos(CATALOG_MIN_ANGLE))) {
-                printf("Star pair is not in star catalog\n");
+                // printf("Star pair is not in star catalog\n");
                 return false;
             }
 
             ijkr_params.angles[index] = angle;
             ijkr_params.angle_indices[index] = bounded_binary_angle_search(angle);
+            // printf("%d: Angle: %f, Index: %d\n", index, angle, ijkr_params.angle_indices[index]);
+            //fflush(stdout);
             ++index;
         }
+    }
+
+    bool mismatch = check_mismatch(image_stars[0].camera, image_stars[1].camera, image_stars[2].camera);
+    // mismatch = (mismatch || check_mismatch(image_stars[0].camera, image_stars[1].camera, image_stars[3].camera));
+    // mismatch = (mismatch || check_mismatch(image_stars[0].camera, image_stars[2].camera, image_stars[3].camera));
+    // mismatch = (mismatch || check_mismatch(image_stars[1].camera, image_stars[2].camera, image_stars[3].camera));
+
+    if (mismatch) {
+        return false;
     }
 
     ijkr_params.ijk_direction = cartesian_signed_area(image_stars[0].camera, image_stars[1].camera, image_stars[2].camera);
@@ -376,6 +422,8 @@ bool setup_star_params(image_star_t image_stars[4]) {
 }
 
 void run_star_identifier(image_star_t image_stars[], uint32_t image_stars_length) {
+    uint8_t min_identified_req = 4;
+
     for (int dj = 1; dj <= image_stars_length - 3; dj++) {
         for (int dk = 1; dk <= image_stars_length - dj - 2; dk++) {
             for (int dr = 1; dr <= image_stars_length - dj - dk - 1; dr++) {
@@ -391,6 +439,20 @@ void run_star_identifier(image_star_t image_stars[], uint32_t image_stars_length
                         image_stars[r - 1]
                     };
 
+                    for (uint8_t i = 0; i < 4; i++) {
+                        if (candidates[i].magnitude == 0.f) {
+                            // printf("Rejected: (%f, %f, %f)\n", candidates[i].camera.x, candidates[i].camera.y, candidates[i].magnitude);
+                            continue;
+                        }
+                    }
+
+                    for (int i = 0; i < MAX_ID_STARS; i++) {
+                        all_stars[i].catalog_star = 0;
+                        all_stars[i].image_star.magnitude = 0.0f;
+                    }
+
+                    // printf("ijkr: %d %d %d %d\n", i - 1, j - 1, k - 1, r - 1);
+
                     bool valid_setup = setup_star_params(candidates);
                     if (valid_setup) {
                         ijkr_t ijkr = find_ijkr();
@@ -405,6 +467,15 @@ void run_star_identifier(image_star_t image_stars[], uint32_t image_stars_length
                             identified_ijkr[3].image_star = image_stars[r - 1];
                             identified_ijkr[3].catalog_star = ijkr.r;
 
+                            find_additional_matches(image_stars);
+
+                            uint8_t total_identified = 0;
+                            for (int i = 0; i < MAX_ID_STARS; i++) {
+                                if (all_stars[i].catalog_star != 0) {
+                                    total_identified += 1;
+                                }
+                            }
+
                             return;
                         }                      
                     }
@@ -415,37 +486,59 @@ void run_star_identifier(image_star_t image_stars[], uint32_t image_stars_length
     }
 }
 
-int main() {
-    initialize_catalog("angle_catalog.csv", "star_catalog.csv");
+void run_full_star_identifier(image_star_t image_stars[]) {
 
-    image_star_t image_stars[ELEMENT_COUNT] = {
-        {{548.4026719273497,448.59646049932917}, 0.f},
-        {{409.6136479530881,437.706805266652}, 0.f},
-        {{609.8642885582511,619.9636109596883}, 0.f},
-        {{775.9032816948344,524.785460117536}, 0.f},
-        {{328.8673568635003,271.711187260408}, 0.f},
-        {{569.858614128298,564.9542537995878}, 0.f},
-        {{664.8416744362834,375.6708372181417}, 0.f},
-        {{489.922688626524,144.92041476259823}, 0.f},
-        {{361.09202887119,463.9575251363737}, 0.f},
-        {{436.8549954271022,647.954081885249}, 0.f},
-        {{539.8439744623835,506.9504680832963}, 0.f},
-        {{567.67559906618,435.4025091212013}, 0.f},
-        {{264.2939723382642,79.17773672506645}, 0.f},
-        {{463.23253452614176,33.738723135178105}, 0.f},
-        {{417.49999999999994,519.5219510824131}, 0.f},
-        {{844.8480752553237,181.09664253721255}, 0.f}
-    };
-
-    run_star_identifier(image_stars, ELEMENT_COUNT);
-    find_additional_matches(image_stars, ELEMENT_COUNT);
-
-    for (int i = 0; i < ELEMENT_COUNT; i++) {
-        float x = all_stars[i].image_star.camera.x;
-        float y = all_stars[i].image_star.camera.y;
-        uint32_t id = all_stars[i].catalog_star;
-
-        printf("\t\t\t\t{ { { %f, %f }, 0.0 }, %d },\n", x, y, id);
+    for (int i = 0; i < MAX_ID_STARS; i++) {
+        all_stars[i].catalog_star = 0;
+        all_stars[i].image_star.magnitude = 0.0f;
     }
+
+    uint8_t identified_star_count = 0;
+    for (int i = 0; i < MAX_ID_STARS; i++) {
+        if (image_stars[i].magnitude != 0.f) {
+            identified_star_count += 1;
+        }
+    }
+
+    if (identified_star_count < 4) {
+        timer_stop_discard();
+        return;
+    }
+
+    run_star_identifier(image_stars, identified_star_count);
 }
+
+// int main() {
+//     initialize_catalog("angle_catalog.csv", "star_catalog.csv");
+
+//     image_star_t image_stars[MAX_ID_STARS] = {
+//         {{437.878723, 510.500000}, 940.000000},
+//         {{413.835663, 509.500000}, 858.000000},
+//         {{461.906036, 511.500000}, 830.000000},
+//         {{503.581604, 545.500000}, 576.000000},
+//         {{479.465424, 544.500000}, 434.000000},
+//         {{552.560913, 188.500000}, 427.000000},
+//         {{576.544128, 189.500000}, 408.000000},
+//         {{389.613861, 508.500000}, 404.000000},
+//         {{527.923218, 546.500000}, 241.000000},
+//         {{485.500000, 512.500000}, 99.000000},
+//         {{600.500000, 190.500000}, 96.000000},
+//         {{528.500000, 187.500000}, 96.000000},
+//         {{0.000000, 0.000000}, 0.000000},
+//         {{0.000000, 0.000000}, 0.000000},
+//         {{0.000000, 0.000000}, 0.000000},
+//         {{0.000000, 0.000000}, 0.000000},
+//     };
+
+//     run_star_identifier(image_stars, MAX_ID_STARS);
+//     find_additional_matches(image_stars, MAX_ID_STARS);
+
+//     for (int i = 0; i < MAX_ID_STARS; i++) {
+//         float x = all_stars[i].image_star.camera.x;
+//         float y = all_stars[i].image_star.camera.y;
+//         uint32_t id = all_stars[i].catalog_star;
+
+//         printf("\t\t\t\t{ { { %f, %f }, 0.0 }, %d },\n", x, y, id);
+//     }
+// }
 

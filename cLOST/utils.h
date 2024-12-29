@@ -12,7 +12,12 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
+#define POW2(a) ((a) * (a))
+#define POW3(a) ((a) * (a) * (a))
+
 void camera_to_spatial(coords_2d_t pixel, coords_3d_t *spatial);
+
+float spatial_angle(coords_3d_t spatial_a, coords_3d_t spatial_b);
 
 float camera_angle(coords_2d_t a, coords_2d_t b);
 

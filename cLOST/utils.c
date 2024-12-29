@@ -14,6 +14,10 @@ float camera_angle(coords_2d_t a, coords_2d_t b) {
     camera_to_spatial(a, &spatial_a);
     camera_to_spatial(b, &spatial_b);
 
+    return spatial_angle(spatial_a, spatial_b);
+}
+
+float spatial_angle(coords_3d_t spatial_a, coords_3d_t spatial_b) {
     float dot_product = dot_coords(spatial_a, spatial_b);
    
     float mag_a = sqrt(dot_coords(spatial_a, spatial_a));
