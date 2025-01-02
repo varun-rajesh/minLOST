@@ -3,7 +3,7 @@ import math
 from scipy.optimize import minimize
 from scipy.stats import linregress
 import numpy as np
-import matplotlib.pyplot as plt
+import sys
 
 
 
@@ -202,11 +202,7 @@ def _calculate_bounding_lines(angles):
     
     m_left, b_left = _fit_above(indices_left, angles)
     m_right, b_right = _fit_below(indices_right, angles)
-    
-    plt.plot(angles)
-    plt.plot([m_left * x + b_left for x in indices])
-    # plt.show()
-    
+       
     m_left_inverse, b_left_inverse = 1 / m_left, -b_left / m_left
     m_right_inverse, b_right_inverse = 1 / m_right, -b_right / m_right
     
@@ -315,7 +311,9 @@ def _generate_template(config_filepath):
 
 
 if __name__ == "__main__":
-    _generate_template("config.ini")
+    if (len(sys.argv) < 2):
+	    print("Missing config file. Usage: python init.py <config.ini>")
+        _generate_template(sys.argv[1])
     
     
     
