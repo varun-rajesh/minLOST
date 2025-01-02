@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Iinclude -Werror -Wall
+CFLAGS = -Iinclude -Werror -Wall -O3 -MMD -MP
 LDFLAGS = 
 
 # Folders
@@ -11,10 +11,28 @@ BUILD_DIR = build
 # Files
 SRCS = $(wildcard $(SRC_DIR)/*.c)
 OBJS = $(patsubst $(SRC_DIR)/%.c, $(BUILD_DIR)/%.o, $(SRCS))
-TARGET = program
+DEPS = $(OBJS:.o=.d)
+TARGET = star_tracker
+
+# OS-specific commands
+RM = rm -rf
+MKDIR = mkdir -p
+PYTHON = python
+
+# Detect platform
+ifeq ($(OS),Windows_NT)
+    RM = del /Q /S
+    MKDIR = mkdir
+    PYTHON = python
+    TARGET = star_tracker.exe  # Ensure .exe extension on Windows
+endif
 
 # Default target
-all: $(TARGET)
+all: init $(TARGET)
+
+# Run Python initialization script
+init:
+	$(PYTHON) init.py
 
 # Build target
 $(TARGET): $(OBJS)
@@ -24,16 +42,19 @@ $(TARGET): $(OBJS)
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
 
+# Include dependency files
+-include $(DEPS)
+
 # Create build directory if it doesn't exist
 $(BUILD_DIR):
-	mkdir $(BUILD_DIR)
+	$(MKDIR) $(BUILD_DIR)
 
 # Clean up
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	$(RM) $(BUILD_DIR) $(TARGET)
 
 # Rebuild everything
 rebuild: clean all
 
 # Phony targets
-.PHONY: all clean rebuild
+.PHONY: all clean rebuild init
