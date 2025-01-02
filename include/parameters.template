@@ -1,0 +1,55 @@
+#ifndef PARAMETERS_H
+#define PARAMETERS_H
+
+// Focal length and pixel size parameters
+#define FOCAL_LENGTH_MM $FOCAL_LENGTH_MM
+#define PIXEL_SIZE_UM $PIXEL_SIZE_UM
+#define FOCAL_LENGTH_PIXELS ((FOCAL_LENGTH_MM * 1000.f) / PIXEL_SIZE_UM)
+
+// Image dimensions and derived values
+#define IMAGE_X $IMAGE_X
+#define IMAGE_HALF_X (IMAGE_X / 2.f)
+#define IMAGE_Y $IMAGE_Y
+#define IMAGE_HALF_Y (IMAGE_Y / 2.f)
+
+// Centroiding parameters
+#define CENTROID_STD_DEV $CENTROID_STD_DEV
+#define STAR_MAGNITUDE_THRESHOLD $STAR_MAGNITUDE_THRESHOLD
+
+// Image metadata handling
+#define SKIP_IMAGE_METADATA $SKIP_IMAGE_METADATA
+
+// Eigenvalue threshold
+#define EIGENVALUE_THRESHOLD $EIGENVALUE_THRESHOLD
+
+// Catalog lengths and output paths
+#define ANGLE_CATALOG_LENGTH $ANGLE_CATALOG_LENGTH
+#define STAR_CATALOG_LENGTH $STAR_CATALOG_LENGTH
+#define ANGLE_CATALOG_OUTPUT $ANGLE_CATALOG_OUTPUT
+#define STAR_CATALOG_OUTPUT $STAR_CATALOG_OUTPUT
+
+// Catalog angle limits
+#define CATALOG_MIN_ANGLE $CATALOG_MIN_ANGLE
+#define CATALOG_MAX_ANGLE $CATALOG_MAX_ANGLE
+
+// Binary search parameters
+#define BIN_SEARCH_EPSILON $BIN_SEARCH_EPSILON
+#define LEFT_M $BIN_SEARCH_LEFT_M
+#define LEFT_B $BIN_SEARCH_LEFT_B
+#define RIGHT_M $BIN_SEARCH_RIGHT_M
+#define RIGHT_B $BIN_SEARCH_RIGHT_B
+
+// Candidate identification status
+#define NO_CANDIDATE_FOUND 0
+#define CANDIDATE_FOUND 1
+#define MULTI_CANDIDATE_ERROR 2147483647
+
+// Cosine twiddle factors
+#define COSINE_TWIDDLE_M $COSINE_TWIDDLE_M
+#define COSINE_TWIDDLE_B $COSINE_TWIDDLE_B
+
+// Star identification parameters
+#define MISMATCH_PROB $MISMATCH_PROB
+#define MAX_ID_STARS $MAX_ID_STARS
+
+#endif // PARAMETERS_H

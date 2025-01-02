@@ -1,0 +1,9 @@
+*.o
+*.txt
+*.csv
+*.exe
+*.bin
+*.png
+__*__
+*.vscode
+build/*

@@ -1,23 +1,20 @@
+import sys
 from PIL import Image
+import os
 
-def convert_png_to_rgb_binary(image_path, output_binary_path):
+def convert_png_to_rgb_binary(image_path):
     try:
-        # Open the image
+        if not image_path.lower().endswith(".png"):
+            raise ValueError("Input file must have a .png extension.")
+        output_binary_path = os.path.splitext(image_path)[0] + ".bin"
         img = Image.open(image_path)
-
-        # Ensure the image is in RGB mode
         img = img.convert("RGB")
-
-        # Get the pixel data
         pixels = list(img.getdata())
-
-        # Get image dimensions
         width, height = img.size
 
-        # Write dimensions and RGB pairs to a binary file
         with open(output_binary_path, 'wb') as f:
-            f.write(width.to_bytes(4, byteorder='big'))  # Write width as 4 bytes
-            f.write(height.to_bytes(4, byteorder='big'))  # Write height as 4 bytes
+            f.write(width.to_bytes(4, byteorder='big'))
+            f.write(height.to_bytes(4, byteorder='big')) 
             for rgb in pixels:
                 f.write(bytes(rgb))
 
@@ -25,7 +22,10 @@ def convert_png_to_rgb_binary(image_path, output_binary_path):
     except Exception as e:
         print(f"Error: {e}")
 
-# Example usage
-image_path = "img_7660.png"  # Path to the PNG image
-output_binary_path = "img_7660.bin"  # Path to the output binary file
-convert_png_to_rgb_binary(image_path, output_binary_path)
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <input_png_path>")
+        sys.exit(1)
+
+    image_path = sys.argv[1]
+    convert_png_to_rgb_binary(image_path)
