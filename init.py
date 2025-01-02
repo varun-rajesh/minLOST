@@ -66,7 +66,7 @@ def _remove_close_stars(star_list, minimum_angular_seperation):
         for j in range(i + 1, len(star_list)):
             angle = _sphere_angle(star_list[i], star_list[j])
             
-            if angle > math.cos(math.radians(minimum_angular_seperation)):
+            if angle > math.cos(minimum_angular_seperation):
                 to_remove.add(i)
                 to_remove.add(j)
     
@@ -104,7 +104,7 @@ def _generate_angle_dict(star_list, maximum_angular_seperation):
         for j in range(i + 1, len(star_list)):
             angle = _sphere_angle(star_list[i], star_list[j])
             
-            if angle > math.cos(math.radians(maximum_angular_seperation)):
+            if angle > math.cos(maximum_angular_seperation):
                 star_pairs.append((star_list[i][3], star_list[j][3]))
                 angles.append(angle)
     
@@ -128,14 +128,14 @@ def _find_in_star_list(full_star_list, star_id):
 def _save_star_list(star_list, filepath):
     with open(filepath, "w") as f:
         for star in star_list:
-            star_data = map(str, star)
-            f.write(", ".join(star_data) + "\n")
+            ra, de, magnitude, star_id, spatial_x, spatial_y, spatial_z = star
+            f.write(f"{{ {ra}f, {de}f, {magnitude}f, {star_id}, {{ {spatial_x}f, {spatial_y}f, {spatial_z}f }} }},\n")
     
 
 def _save_angle_list(star_pairs, angle_list, filepath):
     with open(filepath, "w") as f:
         for (star_a, star_b), angle in zip(star_pairs, angle_list):
-            f.write(f"{star_a}, {star_b}, {angle}\n")
+            f.write(f"{{ {{ {star_a}, {star_b} }}, {angle} }},\n")
     
     
 
@@ -153,11 +153,12 @@ def _generate_database(bright_star_catalog_filepath, num_of_stars, minimum_angul
     star_list = _keep_brightest(full_star_list, 2 * num_of_stars)
     star_list = _remove_close_stars(star_list, minimum_angular_seperation)
     star_list = _keep_brightest(star_list, num_of_stars)
+    
+    star_list = _rename_stars(star_list)
     star_pairs, angles = _generate_angle_dict(star_list, maximum_angular_seperation)
     if (validate):
         _validate_database(full_star_list, star_pairs, angles)
         
-    star_list = _rename_stars(star_list)
     star_list = _append_spatial(star_list)
     
     return star_list, star_pairs, np.array(angles)
@@ -201,6 +202,10 @@ def _calculate_bounding_lines(angles):
     
     m_left, b_left = _fit_above(indices_left, angles)
     m_right, b_right = _fit_below(indices_right, angles)
+    
+    plt.plot(angles)
+    plt.plot([m_left * x + b_left for x in indices])
+    # plt.show()
     
     m_left_inverse, b_left_inverse = 1 / m_left, -b_left / m_left
     m_right_inverse, b_right_inverse = 1 / m_right, -b_right / m_right
@@ -262,21 +267,25 @@ def _generate_template(config_filepath):
     
     star_catalog_filepath = config_dict["BSC_FILE"]
     star_count = int(config_dict["CATALOG_STAR_COUNT"])
-    star_min_angle = float(config_dict["CATALOG_MIN_ANGLE"])
-    star_max_angle = float(config_dict["CATALOG_MAX_ANGLE"])
+    star_min_angle = math.radians(float(config_dict["CATALOG_MIN_ANGLE"]))
+    star_max_angle = math.radians(float(config_dict["CATALOG_MAX_ANGLE"]))
     
     star_list, star_pairs, angles = _generate_database(star_catalog_filepath, star_count, star_min_angle, star_max_angle, False)
 
-    _save_star_list(star_list, config_dict["STAR_CATALOG_CSV"])
-    _save_angle_list(star_pairs, angles, config_dict["ANGLE_CATALOG_CSV"])
+    _save_star_list(star_list, config_dict["STAR_CATALOG_OUTPUT"])
+    _save_angle_list(star_pairs, angles, config_dict["ANGLE_CATALOG_OUTPUT"])
     
     angle_catalog_length = len(angles)
     star_catalog_length = len(star_list)
 
     bin_search_params = _calculate_bounding_lines(angles)
     
-    twiddle_angle = float(config_dict["STAR_ANGLE_THRESHOLD"])
+    twiddle_angle = math.radians(float(config_dict["STAR_ANGLE_THRESHOLD"]))
     cosine_twiddle = _calculate_twiddle(star_max_angle, twiddle_angle)
+    
+    angle_catalog_output = "\"" + "../" + config_dict["ANGLE_CATALOG_OUTPUT"] + "\""
+    star_catalog_output = "\"" + "../" + config_dict["STAR_CATALOG_OUTPUT"] + "\""
+    
     
     template = template.safe_substitute(FOCAL_LENGTH_MM = config_dict["FOCAL_LENGTH_MM"],
                              PIXEL_SIZE_UM = config_dict["PIXEL_SIZE_UM"],
@@ -296,10 +305,11 @@ def _generate_template(config_filepath):
                              COSINE_TWIDDLE_M = cosine_twiddle[0],
                              COSINE_TWIDDLE_B = cosine_twiddle[1],
                              MAX_ID_STARS = config_dict["MAX_ID_STARS"],
-                             ANGLE_CATALOG_CSV = config_dict["ANGLE_CATALOG_CSV"],
-                             STAR_CATALOG_CSV = config_dict["STAR_CATALOG_CSV"])
-    #TODO ADD CENTROID STD_DEV
-    #TODO ADD STAR MAGNITUDE THRESHOLD
+                             ANGLE_CATALOG_OUTPUT = angle_catalog_output,
+                             STAR_CATALOG_OUTPUT = star_catalog_output,
+                             CENTROID_STD_DEV = config_dict["CENTROID_STD_DEV"],
+                             STAR_MAGNITUDE_THRESHOLD = config_dict["STAR_MAGNITUDE_THRESHOLD"],
+                             MISMATCH_PROB = config_dict["MISMATCH_PROB"])
 
     _save_template(template, config_dict["GENERATED_FILE"])
 

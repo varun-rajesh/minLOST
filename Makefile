@@ -1,6 +1,6 @@
 # Compiler and flags
 CC = gcc
-CFLAGS = -Iinclude -Wall -Wextra -Werror -std=c99
+CFLAGS = -Iinclude -Werror -Wall
 LDFLAGS = 
 
 # Folders
