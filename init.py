@@ -312,7 +312,7 @@ def _generate_template(config_filepath):
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
-	    print("Missing config file. Usage: python init.py <config.ini>")
+        print("Missing config file. Usage: python init.py <config.ini>")
         _generate_template(sys.argv[1])
     
     
