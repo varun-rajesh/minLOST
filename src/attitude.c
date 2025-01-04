@@ -144,6 +144,6 @@ void run_attitude(identified_star_t identified_stars[], float attitude[]) {
         quaternion_to_euler(attitude, &ra, &de, &roll);
         printf("RA=%f, Dec=%f, Roll=%f\n", ra, de, roll);
     } else {
-        printf("Less than 4 stars detected\n");
+        printf("Less than 4 stars identified\n");
     }
 }

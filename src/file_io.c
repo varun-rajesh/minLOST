@@ -5,6 +5,7 @@ void import_binary_image(uint8_t image[IMAGE_Y][IMAGE_X], const char *filepath) 
 
     if (!file) {
         printf("Failed to open %s\n", filepath);
+        return;
     }
 
     #if SKIP_IMAGE_METADATA == 1

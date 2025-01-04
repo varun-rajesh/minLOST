@@ -467,5 +467,11 @@ void run_full_star_identifier(image_star_t image_stars[], identified_star_t all_
         }
     }
 
-    run_star_identifier(image_stars, identified_star_count, all_stars);
+    printf("%d stars identified\n", identified_star_count);
+
+    if (identified_star_count >= 4) {
+        run_star_identifier(image_stars, identified_star_count, all_stars);
+    } else {
+        printf("Not enough stars centroided\n");
+    }
 }

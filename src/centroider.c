@@ -137,6 +137,7 @@ int compare_image_stars(const void *a, const void *b) {
 
 void run_centroider(const char *filename, image_star_t image_stars[MAX_ID_STARS]) {
     uint8_t image[IMAGE_Y][IMAGE_X];
+    printf("Importing image\n");
     import_binary_image(image, filename);
 
     float avg_intensity, std_intensity;
